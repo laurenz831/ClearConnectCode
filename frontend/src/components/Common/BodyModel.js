@@ -56,7 +56,66 @@ const BACK = [
   ...pair('back', 'heel', 'Ferse', 40.3, 140.5, 3.8, 3.5),
 ];
 
-const BY_ID = Object.fromEntries([...FRONT, ...BACK].map(p => [p.id, p]));
+/* ------------------------------------------------------------------ */
+/*  Vergrößerte Ansichten (Detail)                                     */
+/* ------------------------------------------------------------------ */
+
+// Rücken, von hinten gesehen: links im Bild = linke Körperseite.
+const BACK_DETAIL_ZONES = (() => {
+  const rows = [['upper', 'Oberer Rücken', 10, 36], ['middle', 'Mittlerer Rücken', 36, 62], ['lower', 'Unterer Rücken', 62, 90]];
+  const cols = [['left', 'links', 18, 46], ['right', 'rechts', 54, 82]];
+  const z = [];
+  rows.forEach(([rk, rl, y1, y2]) => cols.forEach(([ck, cl, x1, x2]) =>
+    z.push({ id: `detail-back-${rk}-${ck}`, label: `${rl} ${cl}`, rect: [x1, y1, x2 - x1, y2 - y1] })));
+  z.push({ id: 'detail-back-spine', label: 'Wirbelsäule', rect: [46, 6, 8, 88] });
+  z.push({ id: 'detail-back-sacrum', label: 'Kreuzbein / Steißbein', rect: [40, 90, 20, 10] });
+  return z;
+})();
+
+const footDetailZones = side => [
+  { id: `detail-foot-${side}-ankle`,   label: `Knöchel ${SIDE[side]}`,   ell: [32, 28, 8, 6] },
+  { id: `detail-foot-${side}-heel`,    label: `Ferse ${SIDE[side]}`,     ell: [19, 52, 8, 8] },
+  { id: `detail-foot-${side}-instep`,  label: `Fußrücken ${SIDE[side]}`, ell: [64, 43, 18, 6] },
+  { id: `detail-foot-${side}-sole`,    label: `Fußsohle ${SIDE[side]}`,  ell: [58, 59, 28, 3.6] },
+  { id: `detail-foot-${side}-toes`,    label: `Zehen ${SIDE[side]}`,     ell: [103, 53, 10, 7.5] },
+];
+
+const DETAIL_VIEWS = {
+  back: {
+    title: 'Rücken – vergrößerte Ansicht',
+    hint: 'Ansicht von hinten: links im Bild ist Ihre linke Seite.',
+    viewBox: '0 0 100 104',
+    outline: 'M30 3 C40 1 60 1 70 3 L86 9 C89 30 85 60 83 90 C70 100 30 100 17 90 C15 60 11 30 14 9 Z',
+    zones: BACK_DETAIL_ZONES,
+  },
+  'foot-right': {
+    title: 'Rechter Fuß – vergrößerte Ansicht',
+    hint: 'Seitenansicht des rechten Fußes: Zehen zeigen nach rechts.',
+    viewBox: '0 0 120 68',
+    outline: 'M22 3 L41 3 L43 33 C60 37 86 41 105 46 C114 49 116 57 109 62 L20 62 C11 62 9 53 11 45 C13 39 18 35 20 29 Z',
+    zones: footDetailZones('right'),
+  },
+  'foot-left': {
+    title: 'Linker Fuß – vergrößerte Ansicht',
+    hint: 'Seitenansicht des linken Fußes: Zehen zeigen nach rechts.',
+    viewBox: '0 0 120 68',
+    outline: 'M22 3 L41 3 L43 33 C60 37 86 41 105 46 C114 49 116 57 109 62 L20 62 C11 62 9 53 11 45 C13 39 18 35 20 29 Z',
+    zones: footDetailZones('left'),
+  },
+};
+
+// Welche Zone im Gesamtbild öffnet welche vergrößerte Ansicht
+const DETAIL_FOR = {
+  'back-back':       'back',
+  'front-foot-right': 'foot-right',
+  'front-foot-left':  'foot-left',
+  'back-heel-right':  'foot-right',
+  'back-heel-left':   'foot-left',
+};
+
+const DETAIL_ZONES = Object.entries(DETAIL_VIEWS).flatMap(([key, d]) => d.zones.map(z => ({ ...z, detail: key })));
+
+const BY_ID = Object.fromEntries([...FRONT, ...BACK, ...DETAIL_ZONES].map(p => [p.id, p]));
 const FRONT_LABELS = new Set(FRONT.map(p => p.label));
 
 // Anzeigename: gleichnamige Zonen der Rückseite (z. B. "Hals") werden unterscheidbar
@@ -171,34 +230,142 @@ function BodyView({ title, parts, selected, onToggle, back }) {
   );
 }
 
-export default function BodyModel({ onSelect }) {
-  const [selected, setSelected] = useState([]);
+function DetailView({ detailKey, selected, onToggle, onClose }) {
+  const d = DETAIL_VIEWS[detailKey];
+  return (
+    <div className="body-detail-card">
+      <div className="body-detail-head">
+        <div>
+          <div className="body-detail-title">{d.title}</div>
+          <div className="body-detail-hint">{d.hint}</div>
+        </div>
+        <button type="button" className="body-detail-close" onClick={onClose}>Fertig</button>
+      </div>
+      <svg viewBox={d.viewBox} className="body-detail-svg" style={{ touchAction: 'manipulation' }}>
+        <path d={d.outline} fill={COLORS.fill} stroke={COLORS.outline} strokeWidth="1.2" strokeLinejoin="round" />
+        {d.zones.map(z => {
+          const on = selected.includes(z.id);
+          const common = {
+            key: z.id,
+            className: `bm-zone bm-detail-zone${on ? ' is-selected' : ''}`,
+            role: 'button', tabIndex: 0, 'aria-label': z.label, 'aria-pressed': on,
+            onClick: () => onToggle(z.id),
+            onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(z.id); } },
+          };
+          return z.rect
+            ? <rect {...common} x={z.rect[0]} y={z.rect[1]} width={z.rect[2]} height={z.rect[3]} rx="3"><title>{z.label}</title></rect>
+            : <ellipse {...common} cx={z.ell[0]} cy={z.ell[1]} rx={z.ell[2]} ry={z.ell[3]}><title>{z.label}</title></ellipse>;
+        })}
+      </svg>
+      <div className="body-detail-legend">
+        {d.zones.map(z => (
+          <button
+            key={z.id} type="button"
+            className={`body-detail-chip${selected.includes(z.id) ? ' on' : ''}`}
+            onClick={() => onToggle(z.id)}
+          >
+            {z.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  function toggle(id) {
-    const next = selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id];
+// Teile, die tatsächlich gemeldet werden: Wurde in der vergrößerten Ansicht etwas
+// gewählt, ersetzt das die grobe Zone (z. B. "Unterer Rücken rechts" statt "Rücken").
+function reportedIds(selected) {
+  return selected.filter(id => {
+    const detailKey = DETAIL_FOR[id];
+    if (!detailKey) return true;
+    return !selected.some(s => BY_ID[s].detail === detailKey);
+  });
+}
+
+function parentFor(detailKey, selected) {
+  return Object.keys(DETAIL_FOR).find(pid => DETAIL_FOR[pid] === detailKey && selected.includes(pid))
+    || Object.keys(DETAIL_FOR).find(pid => DETAIL_FOR[pid] === detailKey);
+}
+
+export default function BodyModel({ onSelect, hint }) {
+  const [selected, setSelected] = useState([]);
+  const [openDetail, setOpenDetail] = useState(null);
+
+  function update(next) {
     setSelected(next);
-    onSelect?.(next.map(x => BY_ID[x].label));
+    onSelect?.(reportedIds(next).map(x => BY_ID[x].label));
   }
+
+  // Zone im Gesamtbild
+  function toggleMain(id) {
+    const detailKey = DETAIL_FOR[id];
+    if (detailKey) {
+      // Zonen mit vergrößerter Ansicht: auswählen und Detailansicht öffnen
+      if (!selected.includes(id)) update([...selected, id]);
+      setOpenDetail(detailKey);
+      return;
+    }
+    update(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+  }
+
+  // Zone in der vergrößerten Ansicht
+  function toggleDetail(id) {
+    const detailKey = BY_ID[id].detail;
+    let next = selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id];
+    const parent = parentFor(detailKey, next);
+    if (next.includes(id) && parent && !next.includes(parent)) next = [...next, parent];
+    update(next);
+  }
+
+  // Entfernen über die Markierungs-Chips
+  function remove(id) {
+    const detailKey = DETAIL_FOR[id];
+    let next = selected.filter(x => x !== id);
+    if (detailKey) next = next.filter(x => BY_ID[x].detail !== detailKey);
+    if (BY_ID[id].detail) {
+      const rest = next.filter(x => BY_ID[x].detail === BY_ID[id].detail);
+      if (rest.length === 0) {
+        const parents = Object.keys(DETAIL_FOR).filter(pid => DETAIL_FOR[pid] === BY_ID[id].detail);
+        next = next.filter(x => !parents.includes(x));
+      }
+    }
+    update(next);
+  }
+
+  const shown = reportedIds(selected);
 
   return (
     <div className="body-model-area">
       <style>{ZONE_CSS}</style>
-      <p className="body-model-label">Bitte tippen Sie auf die Stelle, wo Sie Schmerzen haben</p>
+      <p className="body-model-label">
+        {hint || 'Bitte tippen Sie auf die betroffenen Stellen.'}
+        <br />
+        <span className="body-model-sublabel">Beim Rücken und bei den Füßen öffnet sich eine vergrößerte Ansicht.</span>
+      </p>
 
       <div
         className="body-model-views"
         style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(16px, 5vw, 48px)' }}
       >
-        <BodyView title="Vorderseite" parts={FRONT} selected={selected} onToggle={toggle} />
-        <BodyView title="Rückseite" parts={BACK} selected={selected} onToggle={toggle} back />
+        <BodyView title="Vorderseite" parts={FRONT} selected={selected} onToggle={toggleMain} />
+        <BodyView title="Rückseite" parts={BACK} selected={selected} onToggle={toggleMain} back />
       </div>
 
-      {selected.length > 0 && (
+      {openDetail && (
+        <DetailView
+          detailKey={openDetail}
+          selected={selected}
+          onToggle={toggleDetail}
+          onClose={() => setOpenDetail(null)}
+        />
+      )}
+
+      {shown.length > 0 && (
         <div className="body-selected-parts">
-          {selected.map(id => (
+          {shown.map(id => (
             <div key={id} className="body-part-tag">
               {tagText(id)}
-              <button type="button" aria-label={`${tagText(id)} entfernen`} onClick={() => toggle(id)}>
+              <button type="button" aria-label={`${tagText(id)} entfernen`} onClick={() => remove(id)}>
                 &times;
               </button>
             </div>

@@ -3,20 +3,7 @@ import { post } from '../services/api';
 import BodyModel from '../components/Common/BodyModel';
 import logo from '../assets/images/Logo.png';
 import erklaervideo from '../assets/videos/erklaervideo.mp4';
-
-const KATEGORIE_TEXT = {
-  pain:       'Schmerzen',
-  checkup:    'Vorsorge / Check-up',
-  medication: 'Medikamente',
-  other:      'Sonstiges',
-};
-
-const KATEGORIE_ICONS = {
-  pain:       '+',
-  checkup:    'V',
-  medication: 'M',
-  other:      '?',
-};
+import { KATEGORIE, KATEGORIE_KACHELN, formatTermin } from '../data/consultation';
 
 function tabletStatus(phase) {
   if (phase === 'welcome' || phase === 'waiting') return { dot: 'waiting',   label: 'Wartend' };
@@ -25,60 +12,25 @@ function tabletStatus(phase) {
   return                                                 { dot: 'connected', label: 'Verbunden' };
 }
 
-// ── Kalender-Komponente ──────────────────────────────────────────────────────
-function PatientCalendar({ onSelect }) {
-  const today = new Date();
-  const [year, setYear]   = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
-  const [selected, setSelected] = useState(null);
-
-  const monthNames = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-  const dayNames   = ['Mo','Di','Mi','Do','Fr','Sa','So'];
-
-  const firstDay = new Date(year, month, 1).getDay();
-  const offset   = (firstDay + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < offset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-  const isToday = d => d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-
-  function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); }
-  function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y+1); } else setMonth(m => m+1); }
-
-  function select(d) {
-    if (!d) return;
-    setSelected(d);
-    const label = `${String(d).padStart(2,'0')}.${String(month+1).padStart(2,'0')}.${year}`;
-    if (onSelect) onSelect(label);
+// ── Datumswahl (kompakt, native Datumsauswahl wie beim Kontrolltermin) ──────
+function DatumFeld({ value, onSelect }) {
+  // value im Format TT.MM.JJJJ (oder null); das Eingabefeld braucht JJJJ-MM-TT
+  const iso = value ? value.split('.').reverse().join('-') : '';
+  function aendern(v) {
+    if (!v) { onSelect(null); return; }
+    const [y, m, d] = v.split('-');
+    onSelect(`${d}.${m}.${y}`);
   }
-
   return (
-    <div className="patient-calendar">
-      <div className="patient-cal-header">
-        <button className="patient-cal-nav" onClick={prevMonth}>‹</button>
-        <span className="patient-cal-title">{monthNames[month]} {year}</span>
-        <button className="patient-cal-nav" onClick={nextMonth}>›</button>
-      </div>
-      <div className="patient-cal-grid">
-        {dayNames.map(d => <div key={d} className="patient-cal-day-label">{d}</div>)}
-        {cells.map((d, i) => (
-          <div
-            key={i}
-            className={`patient-cal-day ${d === null ? 'empty' : ''} ${d && isToday(d) ? 'today' : ''} ${d === selected ? 'selected' : ''}`}
-            onClick={() => select(d)}
-          >
-            {d || ''}
-          </div>
-        ))}
-      </div>
-      {selected && (
-        <div className="selected-date-display">
-          Gewählt: {String(selected).padStart(2,'0')}.{String(month+1).padStart(2,'0')}.{year}
-        </div>
-      )}
-    </div>
+    <label className={`date-field${value ? ' on' : ''}`}>
+      <span className="date-field-label">{value ? 'Gewähltes Datum' : 'Oder Datum wählen'}</span>
+      <input
+        className="date-field-input"
+        type="date"
+        value={iso}
+        onChange={e => aendern(e.target.value)}
+      />
+    </label>
   );
 }
 
@@ -115,10 +67,7 @@ function VASScale({ onSelect }) {
       >
         <div className="vas-gradient" />
         {value !== null && (
-          <div
-            className="vas-thumb"
-            style={{ left: `${(value / 10) * 100}%` }}
-          />
+          <div className="vas-thumb" style={{ left: `${(value / 10) * 100}%` }} />
         )}
       </div>
       <div className="vas-number-row">
@@ -137,47 +86,53 @@ function VASScale({ onSelect }) {
 }
 
 // ── Haupt-Komponente ─────────────────────────────────────────────────────────
-export default function PatientFlow({ state, api }) {
+export default function PatientFlow({ state }) {
   const [localStep, setLocalStep] = useState('welcome');
-  const [freitext, setFreitext]   = useState('');
-  const [vasValue, setVasValue]   = useState(null);
-  const [bodyParts, setBodyParts] = useState([]);
-  const [calDate, setCalDate]     = useState(null);
+  const [name, setName]           = useState('');
 
   // Wenn Konsultation neu startet, zurück zum Willkommensbildschirm
   useEffect(() => {
     if (state.phase === 'welcome') {
       setLocalStep('welcome');
+      setName('');
     }
   }, [state.phase]);
 
   const { dot, label } = tabletStatus(state.phase);
   const aktuelleQ = state.currentQuestion;
-
-  function resetAnswerState() {
-    setFreitext('');
-    setVasValue(null);
-    setBodyParts([]);
-    setCalDate(null);
-  }
+  const mitteilung = state.currentMessage;
 
   function inhalt() {
     if (state.phase === 'welcome') {
       if (localStep === 'welcome')
-        return <WillkommenBildschirm onStart={() => setLocalStep('kategorie')} />;
-      return <KategorieAuswahl onSelect={kat => post('/api/category', { category: kat })} />;
+        return <WillkommenBildschirm onStart={() => setLocalStep('name')} />;
+      if (localStep === 'name')
+        return <NameEingabe name={name} setName={setName} onWeiter={() => setLocalStep('kategorie')} />;
+      return (
+        <KategorieAuswahl
+          onZurueck={() => setLocalStep('name')}
+          onSelect={kat => post('/api/checkin', { name, category: kat })}
+        />
+      );
     }
 
     if (state.phase === 'waiting')
-      return <WartenBildschirm kategorie={state.patientCategory} />;
+      return <WartenBildschirm kategorie={state.patientCategory} name={state.patientName} />;
 
     if (state.phase === 'called')
       return <AufgerufenBildschirm onReady={() => post('/api/patient-ready')} />;
 
     if (state.phase === 'consultation') {
-      // Diagnose vom Arzt anzeigen
-      if (state.diagnosisShown && !state.currentQuestion)
-        return <DiagnoseBildschirm text={state.diagnosis} onOk={() => post('/api/diagnosis-ack')} />;
+      // Mitteilung vom Arzt anzeigen, bis sie gelesen/bestätigt ist
+      if (mitteilung && !mitteilung.acked)
+        return (
+          <MitteilungBildschirm
+            key={mitteilung.mid}
+            msg={mitteilung}
+            onOk={() => post('/api/message-ack', { accepted: true })}
+            onAblehnen={kommentar => post('/api/message-ack', { accepted: false, comment: kommentar })}
+          />
+        );
 
       if (!aktuelleQ) return <VerbundenBildschirm />;
 
@@ -186,42 +141,29 @@ export default function PatientFlow({ state, api }) {
 
       return (
         <FrageBildschirm
+          key={aktuelleQ.qid}
           frage={aktuelleQ}
-          freitext={freitext}
-          setFreitext={setFreitext}
-          vasValue={vasValue}
-          setVasValue={setVasValue}
-          bodyParts={bodyParts}
-          setBodyParts={setBodyParts}
-          calDate={calDate}
-          setCalDate={setCalDate}
-          onAntwort={text => { resetAnswerState(); post('/api/answer', { text }); }}
+          onAntwort={text => post('/api/answer', { text })}
         />
       );
     }
 
     if (state.phase === 'finishing')
-      return (
-        <ZusammenfassungAnfrageBildschirm
-          onJa={() => post('/api/summary-request', { wants: true })}
-          onNein={() => post('/api/summary-request', { wants: false })}
-        />
-      );
+      return <ZusammenfassungWartenBildschirm korrektur={state.summary?.status === 'rejected'} />;
 
-    if (state.phase === 'summary') {
-      const qaPaare = getQAPaare(state.conversation);
+    if (state.phase === 'summary')
       return (
         <ZusammenfassungBildschirm
-          kategorie={state.patientCategory}
-          qaPaare={qaPaare}
-          diagnosis={state.diagnosis}
+          key={state.summary?.text}
+          text={state.summary?.text ?? ''}
           onBestaetigen={() => post('/api/summary-confirm', { confirmed: true })}
-          onAblehnen={() => post('/api/summary-confirm', { confirmed: false })}
+          onKorrektur={korrektur => post('/api/summary-confirm', { confirmed: false, correction: korrektur })}
         />
       );
-    }
 
-    if (state.phase === 'done') return <FertigBildschirm />;
+    if (state.phase === 'confirmed') return <BestaetigtBildschirm />;
+
+    if (state.phase === 'done') return <FertigBildschirm text={state.farewell} />;
     return null;
   }
 
@@ -229,8 +171,7 @@ export default function PatientFlow({ state, api }) {
     <div className="patient-tablet">
       <div className="tablet-header">
         <div className="tablet-logo">
-          <div className="tablet-logo-mark"><img src={logo} style={{ width: '160px', height: 'auto', marginLeft: '90px'}} /></div>
-          {/* <span className="tablet-logo-name">ClearConnect</span> */}
+          <div className="tablet-logo-mark"><img src={logo} alt="ClearConnect" style={{ width: '160px', height: 'auto', marginLeft: '90px'}} /></div>
         </div>
         <div className="tablet-status">
           <div className={`status-dot ${dot}`} />
@@ -244,20 +185,6 @@ export default function PatientFlow({ state, api }) {
   );
 }
 
-// ── Hilfsfunktion ────────────────────────────────────────────────────────────
-function getQAPaare(conversation) {
-  const paare = [];
-  let aktuelleQ = null;
-  for (const msg of conversation) {
-    if (msg.sender === 'doctor')             { aktuelleQ = msg.text; }
-    else if (msg.sender === 'patient' && aktuelleQ) {
-      paare.push({ q: aktuelleQ, a: msg.text });
-      aktuelleQ = null;
-    }
-  }
-  return paare;
-}
-
 // ── Bildschirme ──────────────────────────────────────────────────────────────
 
 function WillkommenBildschirm({ onStart }) {
@@ -265,7 +192,7 @@ function WillkommenBildschirm({ onStart }) {
 
   return (
     <div className="tablet-welcome">
-      <div className="welcome-mark"><img src={logo} style={{ width: '160px', height: 'auto'}} /></div>
+      <div className="welcome-mark"><img src={logo} alt="ClearConnect" style={{ width: '160px', height: 'auto'}} /></div>
       <div className="welcome-title">Willkommen</div>
       <div className="welcome-sub">
         Dieses Tablet hilft Ihnen, mit Ihrem Arzt zu sprechen. Tippen Sie auf die Buttons, um zu antworten.
@@ -287,37 +214,55 @@ function WillkommenBildschirm({ onStart }) {
   );
 }
 
-function KategorieAuswahl({ onSelect }) {
+function NameEingabe({ name, setName, onWeiter }) {
+  const ok = name.trim().length > 1;
   return (
     <div className="tablet-category">
       <div className="tablet-step-label">Schritt 1</div>
-      <div className="tablet-big-title">Warum sind Sie heute hier?</div>
-      <div className="tablet-hint">Bitte tippen Sie auf eine Karte</div>
-      <div className="category-grid">
-        <button className="category-btn pain"       onClick={() => onSelect('pain')}>
-          <span className="cat-icon">+</span>Schmerzen
-        </button>
-        <button className="category-btn checkup"    onClick={() => onSelect('checkup')}>
-          <span className="cat-icon">V</span>Vorsorge
-        </button>
-        <button className="category-btn medication" onClick={() => onSelect('medication')}>
-          <span className="cat-icon">M</span>Medikamente
-        </button>
-        <button className="category-btn other"      onClick={() => onSelect('other')}>
-          <span className="cat-icon">?</span>Sonstiges
-        </button>
-      </div>
+      <div className="tablet-big-title">Wie heißen Sie?</div>
+      <div className="tablet-hint">Bitte geben Sie Vor- und Nachnamen ein</div>
+      <input
+        className="name-input"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && ok) onWeiter(); }}
+        placeholder="Vorname Nachname"
+        autoComplete="off"
+        autoCapitalize="words"
+      />
+      <button className="btn-send-answer" onClick={onWeiter} disabled={!ok}>
+        Weiter
+      </button>
     </div>
   );
 }
 
-function WartenBildschirm({ kategorie }) {
+function KategorieAuswahl({ onSelect, onZurueck }) {
+  return (
+    <div className="tablet-category">
+      <div className="tablet-step-label">Schritt 2</div>
+      <div className="tablet-big-title">Warum sind Sie heute hier?</div>
+      <div className="tablet-hint">Bitte tippen Sie auf eine Karte</div>
+      <div className="category-grid">
+        {KATEGORIE_KACHELN.map(k => (
+          <button key={k.key} className={`category-btn ${k.key}`} onClick={() => onSelect(k.key)}>
+            <span className="cat-icon">{k.icon}</span>{KATEGORIE[k.key]}
+          </button>
+        ))}
+      </div>
+      <button className="btn-dont-know" onClick={onZurueck}>‹ Zurück zur Namenseingabe</button>
+    </div>
+  );
+}
+
+function WartenBildschirm({ kategorie, name }) {
   return (
     <div className="tablet-waiting">
       <div className="waiting-anim">...</div>
       <div className="waiting-title">Bitte warten</div>
       <div className="waiting-sub">Der Arzt ruft Sie gleich auf.</div>
-      <div className="reason-chip">Ihr Anliegen: {KATEGORIE_TEXT[kategorie] ?? kategorie}</div>
+      {name && <div className="reason-chip">{name}</div>}
+      <div className="reason-chip">Ihr Anliegen: {KATEGORIE[kategorie] ?? kategorie}</div>
     </div>
   );
 }
@@ -328,9 +273,9 @@ function AufgerufenBildschirm({ onReady }) {
       <div className="called-tag">DER ARZT IST BEREIT</div>
       <div className="called-anim">→</div>
       <div className="called-title">Bitte kommen Sie ins Untersuchungszimmer</div>
-      <div className="called-sub">Please come to the examination room.</div>
+      <div className="called-sub">Tippen Sie auf den Button, wenn Sie im Zimmer sind.</div>
       <button className="btn-tablet-primary" onClick={onReady}>
-        Verstanden
+        Ich bin im Arztzimmer
       </button>
     </div>
   );
@@ -357,31 +302,96 @@ function GeantwortetBildschirm({ antwort }) {
   );
 }
 
-function DiagnoseBildschirm({ text, onOk }) {
+function MitteilungBildschirm({ msg, onOk, onAblehnen }) {
+  const [ablehnen, setAblehnen]   = useState(false);
+  const [kommentar, setKommentar] = useState('');
   return (
     <div className="tablet-diagnosis">
       <div className="diagnosis-icon">i</div>
       <div className="diagnosis-title">Mitteilung des Arztes</div>
-      <div className="diagnosis-text-box">{text}</div>
-      <button className="btn-diagnosis-ok" onClick={onOk}>
-        Verstanden
-      </button>
+      {msg.text && <div className="diagnosis-text-box" style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>}
+
+      {msg.exams && (
+        <div className="msg-exams-box">
+          <div className="msg-box-label">Folgende Untersuchungen werden gemacht</div>
+          {msg.exams.map(e => (
+            <div key={e} className="msg-exam-item"><span className="msg-exam-check">✓</span>{e}</div>
+          ))}
+        </div>
+      )}
+
+      {msg.appointment && (
+        <div className="msg-appointment-box">
+          <div className="msg-box-label">{msg.appointment.label || 'Termin'}</div>
+          <div className="msg-appointment-date">{formatTermin(msg.appointment)}</div>
+        </div>
+      )}
+
+      {!msg.requiresAck && (
+        <button className="btn-diagnosis-ok" onClick={onOk}>Verstanden</button>
+      )}
+
+      {msg.requiresAck && !ablehnen && (
+        <div className="ack-buttons">
+          <button className="btn-confirm-yes" onClick={onOk}>Bestätigen</button>
+          <button className="btn-confirm-no" onClick={() => setAblehnen(true)}>Ablehnen</button>
+        </div>
+      )}
+
+      {msg.requiresAck && ablehnen && (
+        <div className="ack-decline">
+          <div className="summary-confirm-q">Was ist unklar oder stimmt nicht? (optional)</div>
+          <textarea
+            className="free-text-input"
+            placeholder="Ihre Anmerkung…"
+            value={kommentar}
+            onChange={e => setKommentar(e.target.value)}
+            rows={2}
+            autoFocus
+          />
+          <div className="ack-buttons">
+            <button className="btn-confirm-no" onClick={() => setAblehnen(false)}>Zurück</button>
+            <button className="btn-decline-send" onClick={() => onAblehnen(kommentar.trim())}>Ablehnung senden</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function FrageBildschirm({ frage, freitext, setFreitext, vasValue, setVasValue, bodyParts, setBodyParts, calDate, setCalDate, onAntwort }) {
+function FrageBildschirm({ frage, onAntwort }) {
   const type = frage.type;
+  const [freitext, setFreitext]   = useState('');
+  const [vasValue, setVasValue]   = useState(null);
+  const [bodyParts, setBodyParts] = useState([]);
+  const [calDate, setCalDate]     = useState(null);
+  const [auswahl, setAuswahl]     = useState([]);
+  const [zahl, setZahl]           = useState('');
+
+  function toggleOption(o) {
+    setCalDate(null);
+    if (frage.multi) setAuswahl(a => a.includes(o) ? a.filter(x => x !== o) : [...a, o]);
+    else setAuswahl(a => a[0] === o ? [] : [o]);
+  }
 
   // Was soll als Antwort gesendet werden?
   function getAntwort() {
-    if (type === 'scale')    return vasValue !== null ? `Schmerzstufe: ${vasValue}/10` : null;
-    if (type === 'body')     return bodyParts.length > 0 ? `Ort: ${bodyParts.join(', ')}` : null;
-    if (type === 'calendar') return calDate ? `Datum: ${calDate}` : null;
-    return freitext.trim() || null;
+    const zusatz = freitext.trim();
+    let haupt = null;
+    if (type === 'scale')  haupt = vasValue !== null ? `${vasValue} von 10` : null;
+    if (type === 'body')   haupt = bodyParts.length > 0 ? bodyParts.join(', ') : null;
+    if (type === 'number') haupt = zahl.trim() ? `${zahl.trim()} ${frage.unit || ''}`.trim() : null;
+    if (type === 'choice' || type === 'calendar') {
+      if (auswahl.length) haupt = auswahl.join(', ');
+      else if (calDate)   haupt = frage.datePrefix ? `${frage.datePrefix} ${calDate}` : calDate;
+    }
+    if (type === 'yesno' || type === 'text') return zusatz || null;
+    if (haupt && zusatz) return `${haupt} – ${zusatz}`;
+    return haupt || zusatz || null;
   }
 
   const antwort = getAntwort();
+  const zeigtKalender = type === 'calendar' || (type === 'choice' && frage.calendar);
 
   return (
     <div className="tablet-question">
@@ -391,7 +401,7 @@ function FrageBildschirm({ frage, freitext, setFreitext, vasValue, setVasValue, 
         <div className="question-text">{frage.text}</div>
       </div>
 
-      {/* GIF / Gebärdensprache */}
+      {/* Gebärdensprache-Video (falls vorhanden) */}
       <div className="sign-lang-area">
         <video
           src={`/videos/${frage.id}.mp4`}
@@ -417,31 +427,65 @@ function FrageBildschirm({ frage, freitext, setFreitext, vasValue, setVasValue, 
           </div>
         )}
 
-        {/* VAS-Skala */}
-        {type === 'scale' && (
-          <VASScale onSelect={v => setVasValue(v)} />
+        {/* Auswahl */}
+        {type === 'choice' && (
+          <>
+            {frage.multi && <div className="choice-hint">Mehrere Antworten möglich</div>}
+            <div className="choice-grid">
+              {(frage.options || []).map(o => (
+                <button
+                  key={o}
+                  className={`btn-choice${auswahl.includes(o) ? ' on' : ''}`}
+                  onClick={() => toggleOption(o)}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          </>
         )}
+
+        {/* Zahl */}
+        {type === 'number' && (
+          <div className="number-row">
+            <input
+              className="number-input"
+              type="number"
+              inputMode="decimal"
+              value={zahl}
+              onChange={e => setZahl(e.target.value)}
+              placeholder="0"
+            />
+            {frage.unit && <span className="number-unit">{frage.unit}</span>}
+          </div>
+        )}
+
+        {/* VAS-Skala */}
+        {type === 'scale' && <VASScale onSelect={v => setVasValue(v)} />}
 
         {/* Körpermodell */}
         {type === 'body' && (
-          <BodyModel onSelect={parts => setBodyParts(parts)} />
+          <>
+            <BodyModel onSelect={parts => setBodyParts(parts)} />
+            <button className="btn-no" onClick={() => onAntwort('Nein / keine Stelle')}>
+              Nein / keine Stelle
+            </button>
+          </>
         )}
 
-        {/* Kalender */}
-        {type === 'calendar' && (
-          <PatientCalendar onSelect={d => setCalDate(d)} />
+        {/* Datum (eigener Typ oder zusätzlich zur Auswahl) */}
+        {zeigtKalender && (
+          <DatumFeld value={calDate} onSelect={d => { setCalDate(d); if (d) setAuswahl([]); }} />
         )}
 
-        {/* Freitext (immer sichtbar außer bei body) */}
-        {type !== 'body' && type !== 'calendar' && (
-          <textarea
-            className="free-text-input"
-            placeholder="Oder schreiben Sie Ihre Antwort hier…"
-            value={freitext}
-            onChange={e => setFreitext(e.target.value)}
-            rows={2}
-          />
-        )}
+        {/* Freitext */}
+        <textarea
+          className="free-text-input"
+          placeholder={type === 'text' ? 'Schreiben Sie Ihre Antwort hier…' : 'Oder schreiben Sie hier (optional)…'}
+          value={freitext}
+          onChange={e => setFreitext(e.target.value)}
+          rows={2}
+        />
 
         {/* Ich weiß nicht */}
         <button className="btn-dont-know" onClick={() => onAntwort('Ich weiß nicht')}>
@@ -459,95 +503,92 @@ function FrageBildschirm({ frage, freitext, setFreitext, vasValue, setVasValue, 
   );
 }
 
-function ZusammenfassungAnfrageBildschirm({ onJa, onNein }) {
+function ZusammenfassungWartenBildschirm({ korrektur }) {
   return (
-    <div className="tablet-finishing">
-      <div className="finishing-mark">?</div>
-      <div className="finishing-title">Möchten Sie eine Zusammenfassung erhalten?</div>
-      <div className="finishing-sub">Would you like a summary of today's visit?</div>
-      <div className="finishing-buttons">
-        <button className="btn-ja"   onClick={onJa}>Ja</button>
-        <button className="btn-nein" onClick={onNein}>Nein</button>
+    <div className="tablet-connected">
+      <div className="connected-anim">…</div>
+      <div className="connected-title">
+        {korrektur ? 'Ihre Anmerkung wurde gesendet' : 'Das Gespräch ist beendet'}
+      </div>
+      <div className="connected-sub">
+        {korrektur
+          ? 'Die Zusammenfassung wird korrigiert. Bitte warten Sie…'
+          : 'Die Zusammenfassung wird erstellt. Bitte warten Sie…'}
       </div>
     </div>
   );
 }
 
-function ZusammenfassungBildschirm({ kategorie, qaPaare, diagnosis, onBestaetigen, onAblehnen }) {
-  const hinweise = [
-    'Bitte nehmen Sie Ihre Medikamente wie besprochen ein.',
-    'Ruhen Sie sich aus und schonen Sie sich bei Bedarf.',
-    'Melden Sie sich bei uns, wenn Sie sich schlechter fühlen.',
-  ];
+function ZusammenfassungBildschirm({ text, onBestaetigen, onKorrektur }) {
+  const [korrigieren, setKorrigieren] = useState(false);
+  const [anmerkung, setAnmerkung]     = useState('');
 
   return (
     <div className="tablet-summary">
       <div className="summary-top">
         <div className="summary-top-title">Ihre Zusammenfassung</div>
-        <div className="summary-top-sub">Bitte kurz prüfen</div>
+        <div className="summary-top-sub">Bitte lesen und prüfen Sie Ihre Angaben</div>
       </div>
 
       <div className="summary-scroll">
-        <div>
-          <div className="patient-greeting">Hallo</div>
-          <div className="patient-greeting-sub">Hier ist eine kurze Übersicht Ihres heutigen Besuchs.</div>
-        </div>
-
-        <div className="summary-reason-card">
-          <div className="summary-reason-label">Grund des Besuchs</div>
-          <div className="summary-reason-value">{KATEGORIE_TEXT[kategorie] ?? kategorie}</div>
-        </div>
-
-        {diagnosis && (
-          <div style={{ background: 'var(--yellow-50)', border: '2px solid var(--yellow-200)', borderRadius: 14, padding: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow-700)', marginBottom: 6 }}>MITTEILUNG DES ARZTES</div>
-            <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.5 }}>{diagnosis}</div>
-          </div>
-        )}
-
-        {qaPaare.length > 0 && (
-          <div>
-            <div className="summary-qa-title">Worüber wir gesprochen haben</div>
-            {qaPaare.map((p, i) => (
-              <div key={i} className="summary-qa-item">
-                <div className="summary-qa-q">{p.q}</div>
-                <div className="summary-qa-a">{p.a}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="summary-hints">
-          <div className="summary-hints-title">Hinweise</div>
-          {hinweise.map((h, i) => (
-            <div key={i} className="summary-hint-item">
-              <span className="summary-hint-dot" />
-              {h}
-            </div>
-          ))}
-        </div>
+        <div className="summary-text-box">{text}</div>
       </div>
 
       <div className="summary-confirm-section">
-        <div className="summary-confirm-q">Ist diese Zusammenfassung richtig?</div>
-        <div className="summary-confirm-btns">
-          <button className="btn-confirm-yes" onClick={onBestaetigen}>Ja, stimmt</button>
-          <button className="btn-confirm-no"  onClick={onAblehnen}>Nein</button>
-        </div>
+        {!korrigieren ? (
+          <>
+            <div className="summary-confirm-q">Ist diese Zusammenfassung richtig?</div>
+            <div className="summary-confirm-btns">
+              <button className="btn-confirm-yes" onClick={onBestaetigen}>Ja, stimmt</button>
+              <button className="btn-confirm-no"  onClick={() => setKorrigieren(true)}>Nein, etwas stimmt nicht</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="summary-confirm-q">Was stimmt nicht?</div>
+            <textarea
+              className="free-text-input"
+              placeholder="Bitte beschreiben Sie, was korrigiert werden soll…"
+              value={anmerkung}
+              onChange={e => setAnmerkung(e.target.value)}
+              rows={3}
+              autoFocus
+            />
+            <div className="summary-confirm-btns" style={{ marginTop: 15 }}>
+              <button className="btn-confirm-no" onClick={() => setKorrigieren(false)}>Zurück</button>
+              <button
+                className="btn-confirm-yes"
+                disabled={!anmerkung.trim()}
+                onClick={() => onKorrektur(anmerkung.trim())}
+              >
+                Anmerkung senden
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function FertigBildschirm() {
+function BestaetigtBildschirm() {
+  return (
+    <div className="tablet-connected">
+      <div className="connected-anim">✓</div>
+      <div className="connected-title">Danke für Ihre Bestätigung</div>
+      <div className="connected-sub">Bitte warten Sie auf die Verabschiedung…</div>
+    </div>
+  );
+}
+
+function FertigBildschirm({ text }) {
   return (
     <div className="tablet-done">
       <div className="done-mark">✓</div>
-      <div className="done-title">Vielen Dank!</div>
-      <div className="done-sub">
-        Ihr Besuch ist abgeschlossen.<br />
-        Wir wünschen Ihnen gute Besserung.
-      </div>
+      <div className="done-title">Auf Wiedersehen</div>
+      {text
+        ? <div className="farewell-box">{text}</div>
+        : <div className="done-sub">Ihr Besuch ist abgeschlossen.</div>}
     </div>
   );
 }

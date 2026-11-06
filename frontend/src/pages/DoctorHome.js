@@ -2,12 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { post } from '../services/api';
 
-const KATEGORIE = {
-  pain:       'Schmerzen',
-  checkup:    'Vorsorge',
-  medication: 'Medikamente',
-  other:      'Sonstiges',
-};
+import { KATEGORIE } from '../data/consultation';
 
 // Beispiel-Patienten für den Homescreen (Demo)
 const DEMO_PATIENTS = [
@@ -67,7 +62,7 @@ function MiniCalendar() {
 
 export default function DoctorHome({ state, api }) {
   const navigate = useNavigate();
-  const isActive = ['waiting','called','consultation','finishing','summary','done'].includes(state.phase) && state.phase !== 'welcome';
+  const isActive = ['waiting','called','consultation','finishing','summary','confirmed','done'].includes(state.phase) && state.phase !== 'welcome';
 
   const statsToday = DEMO_PATIENTS.filter(p => p.date === 'heute').length;
   const statsTotal = DEMO_PATIENTS.length;
@@ -136,8 +131,8 @@ export default function DoctorHome({ state, api }) {
                     onClick={goToSession}
                   >
                     <div className="active-tag">LAUFEND</div>
-                    <div className="active-patient">Maria Hoffmann</div>
-                    <div className="active-meta">68 J. · Zimmer 204 · {KATEGORIE[state.patientCategory] ?? 'Eincheck läuft…'}</div>
+                    <div className="active-patient">{state.patientName || 'Patient:in'}</div>
+                    <div className="active-meta">{KATEGORIE[state.patientCategory] ?? 'Eincheck läuft…'}{state.startedAt ? ` · seit ${state.startedAt}` : ''}</div>
                     <button className="active-btn" onClick={e => { e.stopPropagation(); goToSession(); }}>
                       Zur Konsultation
                     </button>

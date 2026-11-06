@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 
 const ABSENDER = {
-  doctor:    'Arzt',
-  patient:   'Patient',
+  doctor:    'Arzt · Frage',
+  patient:   'Patient:in',
   system:    'System',
   diagnosis: 'Arzt-Mitteilung',
+  message:   'Arzt · Mitteilung',
 };
 
 export default function ConversationHistory({ conversation }) {
@@ -28,7 +29,7 @@ export default function ConversationHistory({ conversation }) {
           conversation.map((msg, i) => (
             <div key={i} className={`history-msg ${msg.sender}`}>
               <div className="msg-sender">{ABSENDER[msg.sender] ?? msg.sender}</div>
-              <div className="msg-text">{msg.text}</div>
+              <div className="msg-text" style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
               <div className="msg-time">{msg.timestamp}</div>
             </div>
           ))

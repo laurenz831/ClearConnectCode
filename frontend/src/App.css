@@ -888,3 +888,169 @@ input, textarea, select { font-family: var(--font); }
   flex: 1 0 auto;
   overflow: visible;
 }
+
+/* ═══════════════════════════════════════════════════
+   Erweiterungen für die Use Cases (UC6, UC13, UC15)
+   ═══════════════════════════════════════════════════ */
+
+/* Fragetypen in der Bibliothek */
+.q-type-pill.choice { background: var(--teal-100); color: var(--teal-700); }
+.q-type-pill.number { background: var(--sand-200); color: var(--gray-600); }
+
+/* Besuchsgrund "Krankmeldung" */
+.category-btn.sick { background: var(--amber-50); color: var(--amber-600); border-color: var(--amber-100); }
+.category-btn.other { grid-column: 1 / -1; }
+
+/* Namenseingabe */
+.name-input {
+  width: 100%; padding: 24px; font-size: 30px;
+  border: 1.5px solid var(--gray-200); border-radius: 15px; outline: none; text-align: center;
+}
+.name-input:focus { border-color: var(--blue-400); }
+
+/* Auswahl-Buttons und Zahleneingabe (Patient) */
+.choice-hint { font-size: 18px; color: var(--gray-400); }
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn-choice {
+  padding: 21px 15px; background: #fff; color: var(--gray-800);
+  border: 2px solid var(--gray-200); border-radius: 15px;
+  font-size: 22.5px; font-weight: 600; transition: all .12s;
+}
+.btn-choice.on { background: var(--blue-700); color: #fff; border-color: var(--blue-700); }
+.btn-choice-calendar { width: 100%; background: var(--green-50); border-color: var(--green-100); color: var(--green-700); }
+.btn-choice-calendar.on { background: var(--green-600); border-color: var(--green-600); color: #fff; }
+.number-row { display: flex; align-items: center; gap: 15px; }
+.number-input {
+  flex: 1; padding: 21px; font-size: 36px; font-weight: 700; text-align: center;
+  border: 1.5px solid var(--gray-200); border-radius: 15px; outline: none;
+}
+.number-input:focus { border-color: var(--blue-400); }
+.number-unit { font-size: 28px; font-weight: 600; color: var(--gray-500); min-width: 80px; }
+
+/* Körpermodell: vergrößerte Ansicht */
+.body-model-sublabel { font-size: 16px; color: var(--gray-400); }
+.body-detail-card {
+  width: 100%; background: #fff; border: 2px solid var(--blue-200); border-radius: 18px;
+  padding: 18px; display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.body-detail-head { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.body-detail-title { font-size: 21px; font-weight: 700; color: var(--blue-800); }
+.body-detail-hint  { font-size: 16px; color: var(--gray-500); margin-top: 3px; }
+.body-detail-close { padding: 12px 24px; background: var(--blue-700); color: #fff; border: none; border-radius: 12px; font-size: 19px; font-weight: 600; }
+.body-detail-svg { width: min(80vw, 420px); height: auto; display: block; }
+.bm-detail-zone { stroke: #94a3b8; stroke-width: .5; stroke-dasharray: 2 1.5; }
+.bm-detail-zone.is-selected { stroke-dasharray: none; }
+.body-detail-legend { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.body-detail-chip { padding: 9px 15px; border-radius: 12px; border: 1.5px solid var(--gray-200); background: var(--gray-50); font-size: 17px; color: var(--gray-700); }
+.body-detail-chip.on { background: #dc2626; border-color: #dc2626; color: #fff; }
+
+/* Mitteilung am Tablet */
+.msg-exams-box, .msg-appointment-box {
+  width: 100%; max-width: 600px; text-align: left;
+  border-radius: 18px; padding: 21px 27px;
+}
+.msg-exams-box { background: var(--blue-50); border: 1.5px solid var(--blue-200); }
+.msg-appointment-box { background: var(--green-50); border: 1.5px solid var(--green-100); }
+.msg-box-label { font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 10px; }
+.msg-exam-item { font-size: 24px; font-weight: 600; padding: 4px 0; display: flex; gap: 12px; align-items: center; }
+.msg-exam-check { color: var(--green-600); }
+.msg-appointment-date { font-size: 27px; font-weight: 700; color: var(--green-700); }
+
+/* Zusammenfassung / Verabschiedung am Tablet */
+.summary-text-box {
+  background: #fff; border: 1.5px solid var(--gray-200); border-radius: 15px;
+  padding: 24px; font-size: 22px; line-height: 1.6; color: var(--gray-800); white-space: pre-wrap;
+}
+.btn-confirm-yes:disabled { opacity: .4; cursor: not-allowed; }
+.farewell-box {
+  background: var(--blue-50); border: 1.5px solid var(--blue-200); border-radius: 18px;
+  padding: 27px; font-size: 25px; line-height: 1.6; color: var(--gray-800);
+  max-width: 640px; white-space: pre-wrap; text-align: left;
+}
+
+/* Arzt: Mitteilungs-Panel */
+.message-panel {
+  background: var(--amber-50); border: 1.5px solid var(--amber-100); border-radius: var(--radius);
+  padding: 18px 21px; display: flex; flex-direction: column; gap: 12px;
+}
+.template-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.template-chip {
+  padding: 7px 13px; border-radius: 9px; border: 1.5px solid var(--amber-100);
+  background: #fff; color: var(--amber-600); font-size: 15px; font-weight: 600;
+}
+.template-chip.on { background: var(--amber-500); color: #fff; border-color: var(--amber-500); }
+.message-options { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; font-size: 15px; color: var(--gray-700); }
+.message-options label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.exam-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.exam-option {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #fff;
+  border: 1.5px solid var(--gray-200); border-radius: 9px; font-size: 15px; cursor: pointer;
+}
+.exam-option.on { border-color: var(--blue-400); background: var(--blue-50); }
+.appointment-row { display: grid; grid-template-columns: 1.4fr 1fr .8fr; gap: 8px; }
+.appointment-input { padding: 9px 12px; border: 1.5px solid var(--gray-200); border-radius: 9px; font-size: 15px; }
+
+.message-status-card { background: #fff; border: 1.5px solid var(--amber-100); border-left: 4px solid var(--amber-400); border-radius: var(--radius); padding: 16px 20px; }
+.message-status-card.acked { border-left-color: var(--green-500); }
+.message-status-text { font-size: 17px; color: var(--gray-800); white-space: pre-wrap; line-height: 1.5; }
+.message-status-extra { font-size: 15px; color: var(--gray-600); margin-top: 6px; }
+.message-status-state { font-size: 15px; font-weight: 700; margin-top: 10px; color: var(--amber-600); }
+.message-status-card.acked .message-status-state { color: var(--green-600); }
+
+.info-banner { background: var(--blue-50); border: 1.5px solid var(--blue-200); color: var(--blue-700); border-radius: var(--radius); padding: 14px 18px; font-size: 16px; }
+.preview-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.preview-option { font-size: 14px; padding: 4px 10px; border-radius: 8px; background: var(--teal-50); color: var(--teal-700); border: 1px solid var(--teal-100); }
+.preview-option.muted { background: var(--gray-50); color: var(--gray-500); border-color: var(--gray-200); }
+.custom-q-type { margin-left: 12px; font-size: 13px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--gray-200); background: #fff; }
+
+.history-msg.message { background: var(--amber-50); border-left: 3px solid var(--amber-400); }
+.history-msg.message .msg-sender { color: var(--amber-600); }
+
+/* Arzt: Abschluss-Ansicht */
+.abschluss-grid { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.1fr); gap: 24px; align-items: start; }
+.abschluss-panel { background: #fff; border: 1.5px solid var(--gray-200); border-radius: var(--radius-lg); padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.abschluss-steps { display: flex; gap: 8px; flex-wrap: wrap; }
+.abschluss-steps span { font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 8px; background: var(--gray-100); color: var(--gray-400); }
+.abschluss-steps span.on { background: var(--blue-700); color: #fff; }
+.abschluss-steps span.done { background: var(--green-100); color: var(--green-700); }
+.summary-editor {
+  width: 100%; padding: 14px 16px; border: 1.5px solid var(--gray-200); border-radius: 10px;
+  font-size: 15px; line-height: 1.55; font-family: var(--font); resize: vertical; outline: none;
+}
+.summary-editor:focus { border-color: var(--blue-400); }
+.abschluss-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.correction-banner { background: var(--red-50); border: 1.5px solid var(--red-100); color: var(--red-600); border-radius: 10px; padding: 12px 16px; font-size: 15px; }
+.confirm-banner { background: var(--green-50); border: 1.5px solid var(--green-100); color: var(--green-700); border-radius: 10px; padding: 12px 16px; font-size: 15px; font-weight: 600; }
+.summary-preview { white-space: pre-wrap; font-size: 14.5px; line-height: 1.55; color: var(--gray-700); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 10px; padding: 12px 14px; }
+.farewell-option { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gray-700); }
+@media print {
+  .abschluss-panel { display: none; }
+  .abschluss-grid { display: block; }
+}
+
+/* Kopfzeile Arzt: langer Name darf nicht in die Buttons laufen */
+.patient-info { overflow: hidden; }
+.patient-info > div:nth-child(2) { min-width: 130px; flex-shrink: 0; }
+.patient-name, .patient-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-badge { white-space: nowrap; }
+.reason-badge { white-space: nowrap; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Korrekturen 06.11.: Ablehnen von Mitteilungen, kompakte Datumswahl */
+.ack-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 600px; }
+.ack-decline { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 12px; }
+.btn-decline-send { padding: 21px; background: var(--red-500); color: #fff; border: none; border-radius: 13.5px; font-size: 22.5px; font-weight: 600; }
+.btn-decline-send:hover { background: var(--red-600); }
+.status-pill.declined { background: var(--red-100); color: var(--red-600); }
+.message-status-card.declined { border-left-color: var(--red-500); }
+.message-status-card.declined .message-status-state { color: var(--red-600); }
+
+.date-field {
+  display: flex; align-items: center; justify-content: space-between; gap: 15px;
+  padding: 12px 18px; background: var(--green-50); border: 2px solid var(--green-100); border-radius: 15px;
+}
+.date-field.on { background: var(--blue-50); border-color: var(--blue-400); }
+.date-field-label { font-size: 21px; font-weight: 600; color: var(--gray-700); }
+.date-field-input {
+  font-size: 22px; padding: 10px 14px; border: 1.5px solid var(--gray-200); border-radius: 10px;
+  background: #fff; color: var(--gray-800); font-family: var(--font); min-width: 220px;
+}
