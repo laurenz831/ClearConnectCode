@@ -8,6 +8,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Jedes neue Gerät einmal im Terminal melden (z. B. das iPad)
+const seenClients = new Set();
+app.use((req, res, next) => {
+  const ip = (req.ip || '').replace('::ffff:', '');
+  if (!seenClients.has(ip)) {
+    seenClients.add(ip);
+    console.log(`Neues Gerät verbunden: ${ip}`);
+  }
+  next();
+});
+
 // ─── Initialer Zustand ───────────────────────────────────────────────────────
 let state     = createInitialState();
 let sessions  = [];      // Archiv abgeschlossener Konsultationen
@@ -152,6 +163,14 @@ function archiveSession() {
 
 // ─── Server starten ───────────────────────────────────────────────────────────
 const PORT = 3001;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`ClearConnect Backend läuft auf http://localhost:${PORT}`);
+  // Netzwerkadressen ausgeben, damit man weiß, was am iPad einzugeben ist
+  const nets = require('os').networkInterfaces();
+  Object.values(nets).flat()
+    .filter(n => n && (n.family === 'IPv4' || n.family === 4) && !n.internal)
+    .forEach(n => console.log(`  iPad (Patient): http://${n.address}:3000/patient   |   Backend: http://${n.address}:${PORT}`));
+  if (!Object.values(nets).flat().some(n => n && !n.internal && (n.family === 'IPv4' || n.family === 4))) {
+    console.log('  Keine Netzwerkadresse gefunden – ist der Laptop mit dem WLAN verbunden?');
+  }
 });

@@ -1,334 +1,206 @@
 import React, { useState } from 'react';
 
-// Körperzonen – jeweils mit einem SVG-Pfad und einem lesbaren Namen
-const FRONT_PARTS = [
-  { id: 'forehead',         label: 'Stirn',                  cx: 50, cy: 8,   rx: 8,  ry: 5 },
-  { id: 'face',             label: 'Gesicht',                cx: 50, cy: 14,  rx: 9,  ry: 8 },
-  { id: 'neck-front',       label: 'Hals',                   cx: 50, cy: 26,  rx: 4,  ry: 6 },
-  { id: 'shoulder-left',    label: 'Schulter links',         cx: 32, cy: 33,  rx: 7,  ry: 6 },
-  { id: 'shoulder-right',   label: 'Schulter rechts',        cx: 68, cy: 33,  rx: 7,  ry: 6 },
-  { id: 'chest',            label: 'Brust',                  cx: 50, cy: 43,  rx: 10, ry: 10 },
-  { id: 'abdomen',          label: 'Bauch',                  cx: 50, cy: 60,  rx: 11, ry: 12 },
-  { id: 'upper-arm-left',   label: 'Oberarm links',          cx: 25, cy: 42,  rx: 6,  ry: 10 },
-  { id: 'upper-arm-right',  label: 'Oberarm rechts',         cx: 75, cy: 42,  rx: 6,  ry: 10 },
-  { id: 'forearm-left',     label: 'Unterarm links',         cx: 18, cy: 58,  rx: 5,  ry: 12 },
-  { id: 'forearm-right',    label: 'Unterarm rechts',        cx: 82, cy: 58,  rx: 5,  ry: 12 },
-  { id: 'palm-left',        label: 'Handinnenfläche links',  cx: 14, cy: 72,  rx: 5,  ry: 6 },
-  { id: 'palm-right',       label: 'Handinnenfläche rechts', cx: 86, cy: 72,  rx: 5,  ry: 6 },
-  { id: 'hip-left',         label: 'Hüfte links',            cx: 38, cy: 75,  rx: 7,  ry: 6 },
-  { id: 'hip-right',        label: 'Hüfte rechts',           cx: 62, cy: 75,  rx: 7,  ry: 6 },
-  { id: 'groin',            label: 'Intimbereich',           cx: 50, cy: 80,  rx: 6,  ry: 5 },
-  { id: 'thigh-left',       label: 'Oberschenkel links',     cx: 40, cy: 97,  rx: 7,  ry: 14 },
-  { id: 'thigh-right',      label: 'Oberschenkel rechts',    cx: 60, cy: 97,  rx: 7,  ry: 14 },
-  { id: 'knee-left',        label: 'Knie links',             cx: 40, cy: 112, rx: 6,  ry: 5 },
-  { id: 'knee-right',       label: 'Knie rechts',            cx: 60, cy: 112, rx: 6,  ry: 5 },
-  { id: 'shin-left',        label: 'Schienbein links',       cx: 40, cy: 127, rx: 5,  ry: 12 },
-  { id: 'shin-right',       label: 'Schienbein rechts',      cx: 60, cy: 127, rx: 5,  ry: 12 },
-  { id: 'foot-left',        label: 'Fuß links',              cx: 40, cy: 142, rx: 6,  ry: 4 },
-  { id: 'foot-right',       label: 'Fuß rechts',             cx: 60, cy: 142, rx: 6,  ry: 4 },
-];
+/* ------------------------------------------------------------------ */
+/*  Konfiguration                                                      */
+/* ------------------------------------------------------------------ */
 
-const BACK_PARTS = [
-  { id: 'head-back',           label: 'Kopf',                       cx: 50, cy: 12,  rx: 10, ry: 9 },
-  { id: 'neck-back',           label: 'Hals',                       cx: 50, cy: 26,  rx: 4,  ry: 6 },
-  { id: 'back',                label: 'Rücken',                     cx: 50, cy: 52,  rx: 11, ry: 16 },
-  { id: 'upper-arm-left-back', label: 'Oberarm links',              cx: 25, cy: 42,  rx: 6,  ry: 10 },
-  { id: 'upper-arm-right-back',label: 'Oberarm rechts',             cx: 75, cy: 42,  rx: 6,  ry: 10 },
-  { id: 'elbow-left',          label: 'Ellenbogen links',           cx: 20, cy: 54,  rx: 5,  ry: 4 },
-  { id: 'elbow-right',         label: 'Ellenbogen rechts',          cx: 80, cy: 54,  rx: 5,  ry: 4 },
-  { id: 'forearm-left-back',   label: 'Unterarm links',             cx: 18, cy: 65,  rx: 5,  ry: 12 },
-  { id: 'forearm-right-back',  label: 'Unterarm rechts',            cx: 82, cy: 65,  rx: 5,  ry: 12 },
-  { id: 'palm-back-left',      label: 'Handaußenfläche links',      cx: 14, cy: 78,  rx: 5,  ry: 6 },
-  { id: 'palm-back-right',     label: 'Handaußenfläche rechts',     cx: 86, cy: 78,  rx: 5,  ry: 6 },
-  { id: 'glute-left',          label: 'Gesäß links',                cx: 40, cy: 73,  rx: 8,  ry: 8 },
-  { id: 'glute-right',         label: 'Gesäß rechts',               cx: 60, cy: 73,  rx: 8,  ry: 8 },
-  { id: 'thigh-back-left',     label: 'Oberschenkel hinten links',  cx: 40, cy: 97,  rx: 7,  ry: 14 },
-  { id: 'thigh-back-right',    label: 'Oberschenkel hinten rechts', cx: 60, cy: 97,  rx: 7,  ry: 14 },
-  { id: 'calf-left',           label: 'Wade links',                 cx: 40, cy: 125, rx: 5,  ry: 13 },
-  { id: 'calf-right',          label: 'Wade rechts',                cx: 60, cy: 125, rx: 5,  ry: 13 },
-  { id: 'heel-left',           label: 'Ferse links',                cx: 38, cy: 141, rx: 5,  ry: 4 },
-  { id: 'heel-right',          label: 'Ferse rechts',               cx: 62, cy: 141, rx: 5,  ry: 4 },
-];
+const COLORS = { fill: '#eef2f7', outline: '#94a3b8', detail: '#cbd5e1' };
+const SIDE = { left: 'links', right: 'rechts' };
 
-function BodySVG({ parts, selected, onToggle, label }) {
-  return (
-    <div className="body-model-view">
-      <span className="body-view-label">{label}</span>
-      <svg
-        viewBox="0 0 100 160"
-        className="body-svg"
-        style={{ width: 75, height: 140 }}
-      >
-        {/* KOPF - realistisch oval */}
-        <ellipse cx="50" cy="11" rx="10" ry="11" fill="none" stroke="#333" strokeWidth="1" />
-        
-        {/* OHREN - subtil */}
-        <path d="M 38 10 Q 35 12 36 15" stroke="#333" strokeWidth="0.7" fill="none" />
-        <path d="M 62 10 Q 65 12 64 15" stroke="#333" strokeWidth="0.7" fill="none" />
-        
-        {/* GESICHT - Details */}
-        <line x1="46" y1="9" x2="46" y2="12" stroke="#333" strokeWidth="0.5" />
-        <line x1="54" y1="9" x2="54" y2="12" stroke="#333" strokeWidth="0.5" />
-        <path d="M 46 14 Q 50 15.5 54 14" stroke="#333" strokeWidth="0.5" fill="none" />
+const zone = (view, id, label, cx, cy, rx, ry, rot = 0) =>
+  ({ id: `${view}-${id}`, view, label, cx, cy, rx, ry, rot });
 
-        {/* HALS - konvex */}
-        <path d="M 46 22 Q 45 25 46 28" stroke="#333" strokeWidth="0.9" fill="none" />
-        <path d="M 54 22 Q 55 25 54 28" stroke="#333" strokeWidth="0.9" fill="none" />
-
-        {/* OBERKÖRPER - realistische Brustkorb-Form */}
-        <path d="M 46 28 L 32 37 Q 30 43 30 50 Q 30 58 33 65 Q 35 68 42 70 L 58 70 Q 65 68 67 65 Q 70 58 70 50 Q 70 43 68 37 L 54 28" 
-              stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* SCHULTERN - breiter */}
-        <path d="M 32 37 Q 30 38 28 40" stroke="#333" strokeWidth="0.8" fill="none" />
-        <path d="M 68 37 Q 70 38 72 40" stroke="#333" strokeWidth="0.8" fill="none" />
-
-        {/* BRUSTMITTE - Linie */}
-        <line x1="50" y1="28" x2="50" y2="68" stroke="#ddd" strokeWidth="0.5" opacity="0.5" />
-        
-        {/* BRUSTWARZEN-HINWEISE */}
-        <circle cx="45" cy="48" r="0.8" fill="none" stroke="#ddd" strokeWidth="0.4" opacity="0.4" />
-        <circle cx="55" cy="48" r="0.8" fill="none" stroke="#ddd" strokeWidth="0.4" opacity="0.4" />
-
-        {/* OBERARME - gekrümmt */}
-        <path d="M 32 40 Q 25 42 22 50" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <path d="M 68 40 Q 75 42 78 50" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-        {/* UNTERARME - weiter gekrümmt */}
-        <path d="M 22 50 Q 18 58 16 72" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <path d="M 78 50 Q 82 58 84 72" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-        {/* HÄNDE - etwas realistischer */}
-        <path d="M 15 72 Q 13 73 15 76 Q 17 75 16 72" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        <path d="M 85 72 Q 87 73 85 76 Q 83 75 84 72" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-
-        {/* TAILLE - Einbuchtung */}
-        <path d="M 36 60 Q 34 63 36 68" stroke="#ddd" strokeWidth="0.6" fill="none" opacity="0.5" />
-        <path d="M 64 60 Q 66 63 64 68" stroke="#ddd" strokeWidth="0.6" fill="none" opacity="0.5" />
-
-        {/* BAUCH - natürliche Wölbung */}
-        <path d="M 38 62 Q 36 68 38 72 L 62 72 Q 64 68 62 62" 
-              stroke="#333" strokeWidth="0.8" fill="none" opacity="0.6" />
-
-        {/* BECKEN / HÜFTEN - breiter Übergang */}
-        <path d="M 30 70 Q 28 72 30 78 L 50 80 L 70 78 Q 72 72 70 70" 
-              stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-
-        {/* OBERSCHENKEL - dicker, natürliche gekrümmte Linien */}
-        <path d="M 34 78 Q 32 88 34 105" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        <path d="M 46 79 Q 47 88 46 105" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        
-        <path d="M 54 79 Q 53 88 54 105" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        <path d="M 66 78 Q 68 88 66 105" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-
-        {/* KNIE - Verdünnung */}
-        <circle cx="34" cy="105" r="2.2" fill="none" stroke="#ddd" strokeWidth="0.7" opacity="0.6" />
-        <circle cx="46" cy="105" r="2.2" fill="none" stroke="#ddd" strokeWidth="0.7" opacity="0.6" />
-        <circle cx="54" cy="105" r="2.2" fill="none" stroke="#ddd" strokeWidth="0.7" opacity="0.6" />
-        <circle cx="66" cy="105" r="2.2" fill="none" stroke="#ddd" strokeWidth="0.7" opacity="0.6" />
-
-        {/* SCHIENBEIN - dünner als Oberschenkel */}
-        <path d="M 37 107 Q 36 118 37 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        <path d="M 43 107 Q 44 118 43 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        
-        <path d="M 57 107 Q 56 118 57 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        <path d="M 63 107 Q 64 118 63 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-
-        {/* FÜSSE - nur zwei (links und rechts) */}
-        <path d="M 40 135 L 37 142 Q 40 144 43 142 Z" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <path d="M 60 135 L 57 142 Q 60 144 63 142 Z" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-        {/* Klickbare Zonen */}
-        {parts.map(part => {
-          const isSelected = selected.includes(part.id);
-          return (
-            <ellipse
-              key={part.id}
-              cx={part.cx}
-              cy={part.cy}
-              rx={part.rx}
-              ry={part.ry}
-              fill={isSelected ? 'rgba(220,38,38,0.6)' : 'rgba(37,99,235,0.0)'}
-              stroke={isSelected ? '#dc2626' : 'transparent'}
-              strokeWidth={isSelected ? 1.2 : 0}
-              onClick={() => onToggle(part.id, part.label)}
-              style={{ cursor: 'pointer' }}
-            >
-              <title>{part.label}</title>
-            </ellipse>
-          );
-        })}
-
-        {/* Hover-Overlay */}
-        {parts.map(part => (
-          <ellipse
-            key={`hover-${part.id}`}
-            cx={part.cx}
-            cy={part.cy}
-            rx={part.rx}
-            ry={part.ry}
-            fill="transparent"
-            stroke="transparent"
-            onClick={() => onToggle(part.id, part.label)}
-            style={{ cursor: 'pointer' }}
-            onMouseEnter={e => { if (!selected.includes(part.id)) e.target.setAttribute('fill', 'rgba(37,99,235,0.15)'); }}
-            onMouseLeave={e => { if (!selected.includes(part.id)) e.target.setAttribute('fill', 'transparent'); }}
-          />
-        ))}
-      </svg>
-    </div>
-  );
+// Erzeugt eine Zone für beide Körperseiten; x = Position in der linken Bildhälfte.
+// Vorderansicht: links im Bild = RECHTE Körperseite (Patient:in schaut uns an).
+// Rückansicht:   links im Bild = LINKE Körperseite.
+function pair(view, id, label, x, cy, rx, ry, rot = 0) {
+  const [near, far] = view === 'front' ? ['right', 'left'] : ['left', 'right'];
+  return [
+    zone(view, `${id}-${near}`, `${label} ${SIDE[near]}`, x, cy, rx, ry, rot),
+    zone(view, `${id}-${far}`, `${label} ${SIDE[far]}`, 100 - x, cy, rx, ry, -rot),
+  ];
 }
 
-function BackBodySVG({ parts, selected, onToggle, label }) {
+const FRONT = [
+  zone('front', 'forehead', 'Stirn', 50, 6, 5.5, 3.3),
+  zone('front', 'face', 'Gesicht', 50, 14, 6, 5.5),
+  zone('front', 'neck', 'Hals', 50, 22, 3.8, 3),
+  zone('front', 'chest', 'Brust', 50, 40, 11, 8),
+  zone('front', 'abdomen', 'Bauch', 50, 58, 10, 8.5),
+  zone('front', 'navel', 'Bauchnabel', 50, 60, 2, 2),
+  zone('front', 'groin', 'Intimbereich', 50, 73, 4.5, 3.5),
+  ...pair('front', 'ear', 'Ohr', 42.4, 11.2, 1.6, 2.6),
+  ...pair('front', 'shoulder', 'Schulter', 33.8, 32.5, 4, 3.5),
+  ...pair('front', 'upper-arm', 'Oberarm', 32.6, 43, 3.8, 7.5, 12.5),
+  ...pair('front', 'forearm', 'Unterarm', 27.8, 65, 3.3, 7.5, 10.5),
+  ...pair('front', 'fingers', 'Finger', 24.6, 83.3, 2.5, 3.2, 10),
+  ...pair('front', 'hip', 'Hüfte', 38.6, 69.5, 3.4, 3.5),
+  ...pair('front', 'thigh', 'Oberschenkel', 42, 91, 5.5, 12),
+  ...pair('front', 'knee', 'Knie', 40.5, 106, 3.8, 3.5),
+  ...pair('front', 'shin', 'Schienbein', 40.5, 121, 3.5, 10),
+  ...pair('front', 'foot', 'Fuß', 40, 140.5, 4.2, 3.5),
+];
+
+const BACK = [
+  zone('back', 'head', 'Kopf', 50, 11, 7, 9.5),
+  zone('back', 'neck', 'Nacken', 50, 22, 3.8, 3),
+  zone('back', 'back', 'Rücken', 50, 45, 11.5, 15),
+  ...pair('back', 'ear', 'Ohr', 42.4, 11.2, 1.6, 2.6),
+  ...pair('back', 'upper-arm', 'Oberarm', 32.8, 42, 3.8, 6.5, 12.5),
+  ...pair('back', 'elbow', 'Ellenbogen', 29.8, 55, 3.2, 3),
+  ...pair('back', 'forearm', 'Unterarm', 27.6, 66, 3.3, 7, 10.5),
+  ...pair('back', 'hand', 'Hand', 25, 80, 3, 6, 10),
+  ...pair('back', 'glute', 'Gesäß', 43.5, 70, 6.5, 5.5),
+  ...pair('back', 'thigh', 'Oberschenkel hinten', 42, 91, 5.5, 12),
+  ...pair('back', 'calf', 'Wade', 40.5, 121, 3.8, 10),
+  ...pair('back', 'heel', 'Ferse', 40.3, 140.5, 3.8, 3.5),
+];
+
+const BY_ID = Object.fromEntries([...FRONT, ...BACK].map(p => [p.id, p]));
+const FRONT_LABELS = new Set(FRONT.map(p => p.label));
+
+// Anzeigename: gleichnamige Zonen der Rückseite (z. B. "Hals") werden unterscheidbar
+const tagText = id => {
+  const p = BY_ID[id];
+  return p.view === 'back' && FRONT_LABELS.has(p.label) ? `${p.label} (Rückseite)` : p.label;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Silhouette                                                         */
+/* ------------------------------------------------------------------ */
+
+// Linke Bildhälfte einer neutralen Figur; die rechte Hälfte entsteht durch Spiegelung.
+const HALF = [
+  // Kopf mit Kieferlinie, Ohr
+  'M50.5 1.5 C45.8 1.5 43 5.4 43 10.5 C43 13.6 43.6 16.4 45 18.4 C46.4 20.3 48.2 21.3 50.5 21.3 Z',
+  'M43.4 9.2 C41.8 8.7 41.3 10.8 41.7 12.6 C42.1 13.9 42.9 14 43.4 13.3 Z',
+  // Hals
+  'M45.8 17 C46.1 20.5 45.9 23 45.2 25.5 L50.5 26 L50.5 17 Z',
+  // Rumpf: Nacken-Schulter-Linie, Brustkorb, Taille, Becken
+  'M50.5 24 L45.4 24 C42.3 25.7 38 27.1 35.2 28.4 C32.8 29.4 31.4 31.4 31.4 34.2 C31.4 36.6 33.9 38.8 36.8 40 ' +
+    'C37.1 44.2 38.2 48.8 39.1 52.2 C39.8 55.2 39.8 57.8 39.3 60.2 C38.5 63.8 35.9 67.2 35.1 71 ' +
+    'C34.8 73 35.2 75 35.8 76 L50.5 76.5 Z',
+  // Arm: Schulter, Oberarm, Ellenbogen, Unterarm, Handgelenk
+  'M35.8 29.6 C32.4 30 30.5 32 30.5 34.6 C30.2 37.5 29.5 39.8 29.4 41.8 C29 46 28 51 27.4 54.4 ' +
+    'C26.6 55.9 26.2 57 26 58.4 C25.1 63.5 24.5 69.5 24.1 74.6 L27.9 75.4 C28.5 70 30.5 64 31.9 59.6 ' +
+    'C32.2 58 32.3 56.8 32.2 55.6 C33.4 51.5 35.5 47 36.3 43.4 C36.7 41 37 39 36.8 37 Z',
+  // Hand mit Daumen (nach außen, anatomische Normalstellung)
+  'M24.4 72.6 L24.1 74.6 C23 75.8 22 77.3 21.4 79.1 C20.9 80.2 21.4 81.2 22.1 80.7 C22.6 80.4 22.9 79.8 23 79.3 ' +
+    'C22.6 81.2 22.6 83.2 23 84.8 C23.5 86.2 25.2 86.3 25.9 85.2 C26.9 83.4 27.6 80.4 27.9 75.4 L28.2 73 Z',
+  // Bein: Oberschenkel, Knie, Wade, Knöchel
+  'M35.5 70 C34.4 76 34.4 82 35 88 C35.6 94 36.7 100 37.2 105 C36.8 109 36.5 113 36.8 118 ' +
+    'C37.1 125 38.5 130 38.9 135 L42.1 135 C42.4 130 44 124 44 118 C44.1 113.5 43.6 110 43.8 105.5 ' +
+    'C44.5 98 46.3 90 47.6 84 C48.4 80.5 49.3 78 49.9 76 L50.5 72 Z',
+  // Fuß
+  'M38.9 134.5 C38.2 137.4 36.5 139.6 36.5 141.4 C36.4 143 37.9 143.6 40 143.6 L42.5 143.6 ' +
+    'C43.5 143.6 43.9 142.8 43.5 141.6 C43.1 139.5 42.5 137.5 42.2 134.5 Z',
+];
+
+// Feine Linien (ebenfalls nur linke Hälfte, wird gespiegelt)
+const DETAILS = {
+  front: 'M45.6 27.5 C42.4 28.7 39 29 35.8 29.9 M39.1 106 C40.2 107.2 41.8 107.2 43 106 ' +
+    'M24.2 82.2 L24.4 85.2 M25.3 82 L25.5 84.9',
+  back: 'M40.8 32 C38.2 35 38.2 41.5 40.6 44.5 M49.6 76 C46.8 77.7 41.8 77.9 37.9 76.4 ' +
+    'M39.1 107.5 C40.2 108.5 41.8 108.5 43 107.5',
+};
+
+const MIRROR = 'matrix(-1 0 0 1 100 0)';
+const bothSides = content => [undefined, MIRROR].map(t => <g key={t || 'l'} transform={t}>{content}</g>);
+
+// Zweimal zeichnen (Umriss etwas größer, darüber die Füllung) → eine nahtlose Silhouette
+const shapes = (color, outline) => (
+  <g fill={color} stroke={color} strokeWidth={outline} strokeLinejoin="round">
+    {bothSides(HALF.map((d, i) => <path key={i} d={d} />))}
+  </g>
+);
+
+const Silhouette = ({ back }) => (
+  <g aria-hidden="true">
+    {shapes(COLORS.outline, 1.4)}
+    {shapes(COLORS.fill, 0)}
+    <g fill="none" stroke={COLORS.detail} strokeWidth="0.6" strokeLinecap="round">
+      {bothSides(<path d={back ? DETAILS.back : DETAILS.front} />)}
+      {back
+        ? <path d="M50 29 V66 M50 68.5 V76" strokeDasharray="1.2 1.4" />
+        : <circle cx="50" cy="60" r="0.7" />}
+    </g>
+  </g>
+);
+
+/* ------------------------------------------------------------------ */
+/*  Komponenten                                                        */
+/* ------------------------------------------------------------------ */
+
+const ZONE_CSS = `
+  .bm-zone { fill: transparent; cursor: pointer; transition: fill .15s; outline: none; }
+  @media (hover: hover) { .bm-zone:hover { fill: rgba(37, 99, 235, .18); } }
+  .bm-zone:focus-visible { stroke: #2563eb; stroke-width: .8; }
+  .bm-zone.is-selected { fill: rgba(220, 38, 38, .5); stroke: #dc2626; stroke-width: .6; }
+`;
+
+function BodyView({ title, parts, selected, onToggle, back }) {
   return (
-    <div className="body-model-view">
-      <span className="body-view-label">{label}</span>
+    <figure className="body-model-view" style={{ margin: 0, textAlign: 'center' }}>
+      <figcaption className="body-view-label">{title}</figcaption>
       <svg
-        viewBox="0 0 100 160"
+        viewBox="0 0 100 148"
         className="body-svg"
-        style={{ width: 75, height: 140 }}
+        style={{ width: 'min(42vw, 260px)', height: 'auto', display: 'block', touchAction: 'manipulation' }}
       >
-        {/* KOPF - realistisch oval */}
-        <ellipse cx="50" cy="11" rx="10" ry="11" fill="none" stroke="#333" strokeWidth="1" />
-        
-        {/* HINTERKOPF - Haar-Details */}
-        <path d="M 48 3 Q 50 1.5 52 3" stroke="#333" strokeWidth="0.7" fill="none" />
-        <path d="M 46 5 Q 50 4 54 5" stroke="#333" strokeWidth="0.6" fill="none" />
-
-        {/* HALS - konvex */}
-        <path d="M 46 22 Q 45 25 46 28" stroke="#333" strokeWidth="0.9" fill="none" />
-        <path d="M 54 22 Q 55 25 54 28" stroke="#333" strokeWidth="0.9" fill="none" />
-
-        {/* RÜCKEN - realistische Muskelkontur */}
-        <path d="M 46 28 L 32 37 Q 30 43 30 55 Q 30 65 33 70 Q 35 72 42 73 L 58 73 Q 65 72 67 70 Q 70 65 70 55 Q 70 43 68 37 L 54 28" 
-              stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* WIRBELSÄULE - zentrale Linie */}
-        <line x1="50" y1="28" x2="50" y2="72" stroke="#ddd" strokeWidth="0.6" opacity="0.6" />
-        
-        {/* RÜCKENMUSKULATUR - subtile Linien */}
-        <path d="M 45 40 Q 43 45 44 55" stroke="#ddd" strokeWidth="0.5" fill="none" opacity="0.5" />
-        <path d="M 55 40 Q 57 45 56 55" stroke="#ddd" strokeWidth="0.5" fill="none" opacity="0.5" />
-
-        {/* SCHULTERN - breiter Rücken */}
-        <path d="M 32 37 Q 30 38 28 40" stroke="#333" strokeWidth="0.8" fill="none" />
-        <path d="M 68 37 Q 70 38 72 40" stroke="#333" strokeWidth="0.8" fill="none" />
-
-        {/* OBERARME - gekrümmt */}
-        <path d="M 32 40 Q 25 42 22 50" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <path d="M 68 40 Q 75 42 78 50" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-        {/* UNTERARME - weiter gekrümmt */}
-        <path d="M 22 50 Q 18 58 16 72" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <path d="M 78 50 Q 82 58 84 72" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-        {/* HÄNDE - Hand-Rücken */}
-        <path d="M 15 72 Q 13 73 15 76 Q 17 75 16 72" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        <path d="M 85 72 Q 87 73 85 76 Q 83 75 84 72" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-
-        {/* GESÄSS - natürliche Wölbung */}
-        <path d="M 36 72 Q 32 77 32 85 L 50 88 L 68 85 Q 68 77 64 72" 
-              stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        
-        {/* GESÄSSPALT - subtil */}
-        <line x1="50" y1="72" x2="50" y2="85" stroke="#ddd" strokeWidth="0.5" opacity="0.4" />
-
-        {/* OBERSCHENKEL HINTEN - dicker, natürliche gekrümmte Linien */}
-        <path d="M 34 88 Q 32 95 34 108" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        <path d="M 46 89 Q 47 95 46 108" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        
-        <path d="M 54 89 Q 53 95 54 108" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        <path d="M 66 88 Q 68 95 66 108" stroke="#333" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-
-        {/* WADE - dünner als Oberschenkel, Muskelansätze */}
-        <path d="M 37 108 Q 36 118 37 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        <path d="M 43 108 Q 44 118 43 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        
-        <path d="M 57 108 Q 56 118 57 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-        <path d="M 63 108 Q 64 118 63 135" stroke="#333" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-
-        {/* FERSEN - nur zwei (links und rechts) */}
-        <path d="M 40 135 L 37 142 Q 40 144 43 142 Z" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-        <path d="M 60 135 L 57 142 Q 60 144 63 142 Z" stroke="#333" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-        {/* Klickbare Zonen */}
-        {parts.map(part => {
-          const isSelected = selected.includes(part.id);
+        <Silhouette back={back} />
+        {parts.map(p => {
+          const on = selected.includes(p.id);
           return (
             <ellipse
-              key={part.id}
-              cx={part.cx}
-              cy={part.cy}
-              rx={part.rx}
-              ry={part.ry}
-              fill={isSelected ? 'rgba(220,38,38,0.6)' : 'rgba(37,99,235,0.0)'}
-              stroke={isSelected ? '#dc2626' : 'transparent'}
-              strokeWidth={isSelected ? 1.2 : 0}
-              onClick={() => onToggle(part.id, part.label)}
-              style={{ cursor: 'pointer' }}
+              key={p.id}
+              className={`bm-zone${on ? ' is-selected' : ''}`}
+              cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry}
+              transform={p.rot ? `rotate(${p.rot} ${p.cx} ${p.cy})` : undefined}
+              role="button" tabIndex={0} aria-label={p.label} aria-pressed={on}
+              onClick={() => onToggle(p.id)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(p.id); }
+              }}
             >
-              <title>{part.label}</title>
+              <title>{p.label}</title>
             </ellipse>
           );
         })}
-
-        {/* Hover-Overlay */}
-        {parts.map(part => (
-          <ellipse
-            key={`hover-${part.id}`}
-            cx={part.cx}
-            cy={part.cy}
-            rx={part.rx}
-            ry={part.ry}
-            fill="transparent"
-            stroke="transparent"
-            onClick={() => onToggle(part.id, part.label)}
-            style={{ cursor: 'pointer' }}
-            onMouseEnter={e => { if (!selected.includes(part.id)) e.target.setAttribute('fill', 'rgba(37,99,235,0.15)'); }}
-            onMouseLeave={e => { if (!selected.includes(part.id)) e.target.setAttribute('fill', 'transparent'); }}
-          />
-        ))}
       </svg>
-    </div>
+    </figure>
   );
 }
 
 export default function BodyModel({ onSelect }) {
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedLabels, setSelectedLabels] = useState([]);
+  const [selected, setSelected] = useState([]);
 
-  function toggle(id, label) {
-    setSelectedIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      const newLabels = next.map(nid => {
-        const all = [...FRONT_PARTS, ...BACK_PARTS];
-        return all.find(p => p.id === nid)?.label;
-      }).filter(Boolean);
-      setSelectedLabels(newLabels);
-      if (onSelect) onSelect(newLabels);
-      return next;
-    });
-  }
-
-  function remove(label) {
-    const part = [...FRONT_PARTS, ...BACK_PARTS].find(p => p.label === label);
-    if (part) toggle(part.id, part.label);
+  function toggle(id) {
+    const next = selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id];
+    setSelected(next);
+    onSelect?.(next.map(x => BY_ID[x].label));
   }
 
   return (
     <div className="body-model-area">
+      <style>{ZONE_CSS}</style>
       <p className="body-model-label">Bitte tippen Sie auf die Stelle, wo Sie Schmerzen haben</p>
-      <div className="body-model-views">
-        <BodySVG parts={FRONT_PARTS} selected={selectedIds} onToggle={toggle} label="Vorderseite" />
-        <BackBodySVG parts={BACK_PARTS}  selected={selectedIds} onToggle={toggle} label="Rückseite" />
+
+      <div
+        className="body-model-views"
+        style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(16px, 5vw, 48px)' }}
+      >
+        <BodyView title="Vorderseite" parts={FRONT} selected={selected} onToggle={toggle} />
+        <BodyView title="Rückseite" parts={BACK} selected={selected} onToggle={toggle} back />
       </div>
-      {selectedLabels.length > 0 && (
+
+      {selected.length > 0 && (
         <div className="body-selected-parts">
-          {selectedLabels.map(l => (
-            <div key={l} className="body-part-tag">
-              {l}
-              <button onClick={() => remove(l)}>&times;</button>
+          {selected.map(id => (
+            <div key={id} className="body-part-tag">
+              {tagText(id)}
+              <button type="button" aria-label={`${tagText(id)} entfernen`} onClick={() => toggle(id)}>
+                &times;
+              </button>
             </div>
           ))}
         </div>

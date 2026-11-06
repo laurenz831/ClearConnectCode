@@ -3,9 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import DoctorHome from './pages/DoctorHome';
 import DoctorDashboard from './pages/DoctorDashboard';
 import PatientFlow from './pages/PatientFlow';
+import { API } from './services/api';
 import './App.css';
-
-const API = 'http://localhost:3001';
 
 export default function App() {
   const [state, setState] = useState(null);
